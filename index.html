@@ -480,6 +480,32 @@
   const BEATS = { pierre: 'ciseaux', feuille: 'pierre', ciseaux: 'feuille' };
   const COUNTERS = { ciseaux: 'pierre', pierre: 'feuille', feuille: 'ciseaux' };
 
+  // Serveurs STUN/TURN : le TURN sert de relais quand la connexion directe
+  // échoue (réseaux d'entreprise, 4G, certaines box internet).
+  const PEER_OPTIONS = {
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+      ]
+    }
+  };
+  const CONNECTION_TIMEOUT_MS = 20000;
+
+  function friendlyPeerError(err) {
+    const messages = {
+      'peer-unavailable': "Code invalide, ou l'hôte n'est plus connecté. Vérifiez le code et demandez-en un nouveau si besoin.",
+      network: 'Problème de réseau. Vérifiez votre connexion internet et réessayez.',
+      'server-error': 'Le service de connexion est temporairement indisponible. Réessayez dans un instant.',
+      'browser-incompatible': 'Votre navigateur ne supporte pas cette fonctionnalité.',
+      disconnected: 'Connexion perdue avec le service. Réessayez.',
+      'ssl-unavailable': 'Connexion sécurisée impossible. Réessayez.'
+    };
+    return messages[err.type] || ('Erreur : ' + err.type);
+  }
+
   // Écrans
   const modeSelectEl = document.getElementById('modeSelect');
   const onlineLobbyEl = document.getElementById('onlineLobby');
@@ -574,7 +600,17 @@
     showScreen(modeSelectEl);
   });
 
+  let connectionTimeoutId = null;
+
+  function clearConnectionTimeout() {
+    if (connectionTimeoutId) {
+      clearTimeout(connectionTimeoutId);
+      connectionTimeoutId = null;
+    }
+  }
+
   function cleanupConnection() {
+    clearConnectionTimeout();
     if (conn) { try { conn.close(); } catch (e) {} conn = null; }
     if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
     roomCodeBox.classList.add('hidden');
@@ -589,7 +625,7 @@
     createRoomBtn.disabled = true;
     lobbyStatus.textContent = 'Connexion au service...';
 
-    peer = new Peer();
+    peer = new Peer(PEER_OPTIONS);
 
     peer.on('open', id => {
       roomCodeValue.textContent = id;
@@ -601,15 +637,27 @@
     peer.on('connection', c => {
       conn = c;
       setupConnection();
+      connectionTimeoutId = setTimeout(() => {
+        lobbyStatus.textContent = "La connexion avec l'adversaire n'a pas abouti. Demandez-lui de réessayer.";
+        cleanupConnection();
+      }, CONNECTION_TIMEOUT_MS);
+
       conn.on('open', () => {
+        clearConnectionTimeout();
         onlineRoundsTarget = parseInt(lobbyRoundsSelect.value, 10);
         conn.send({ type: 'settings', rounds: onlineRoundsTarget });
         beginOnlineGame();
       });
     });
 
+    peer.on('disconnected', () => {
+      lobbyStatus.textContent = 'Connexion au service perdue, reconnexion...';
+      peer.reconnect();
+    });
+
     peer.on('error', err => {
-      lobbyStatus.textContent = 'Erreur : ' + err.type;
+      clearConnectionTimeout();
+      lobbyStatus.textContent = friendlyPeerError(err);
       createRoomBtn.disabled = false;
     });
   });
@@ -634,19 +682,32 @@
     joinRoomBtn.disabled = true;
     joinStatus.textContent = 'Connexion...';
 
-    peer = new Peer();
+    peer = new Peer(PEER_OPTIONS);
+
+    connectionTimeoutId = setTimeout(() => {
+      joinStatus.textContent = "La connexion prend trop de temps. Vérifiez votre réseau (ou celui de votre ami) et réessayez.";
+      cleanupConnection();
+      joinRoomBtn.disabled = false;
+    }, CONNECTION_TIMEOUT_MS);
 
     peer.on('open', () => {
-      conn = peer.connect(code);
+      conn = peer.connect(code, { reliable: true });
       setupConnection();
 
       conn.on('open', () => {
+        clearConnectionTimeout();
         joinStatus.textContent = 'Connecté ! En attente des paramètres...';
       });
     });
 
+    peer.on('disconnected', () => {
+      joinStatus.textContent = 'Connexion au service perdue, reconnexion...';
+      peer.reconnect();
+    });
+
     peer.on('error', err => {
-      joinStatus.textContent = 'Erreur : ' + err.type;
+      clearConnectionTimeout();
+      joinStatus.textContent = friendlyPeerError(err);
       joinRoomBtn.disabled = false;
     });
   });
@@ -654,6 +715,7 @@
   function setupConnection() {
     conn.on('data', handleData);
     conn.on('close', () => {
+      clearConnectionTimeout();
       if (!gameAreaEl.classList.contains('hidden')) {
         matchMessageEl.textContent = "⚠️ L'adversaire a quitté la partie";
         matchMessageEl.style.color = 'var(--lose)';
@@ -661,11 +723,14 @@
         setChoicesEnabled(false);
       } else {
         joinStatus.textContent = "L'hôte a annulé la partie";
+        joinRoomBtn.disabled = false;
       }
       conn = null;
     });
     conn.on('error', () => {
+      clearConnectionTimeout();
       joinRoomBtn.disabled = false;
+      createRoomBtn.disabled = false;
     });
   }
 
