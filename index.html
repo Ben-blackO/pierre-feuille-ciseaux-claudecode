@@ -461,6 +461,7 @@
 
     <div class="footer-actions">
       <button class="reset-btn" id="resetBtn">Nouvelle partie</button>
+      <button class="reset-btn hidden" id="backToMenuBtn">← Retour au menu</button>
       <button class="reset-btn hidden" id="quitOnlineBtn">🚪 Quitter la partie</button>
     </div>
   </div>
@@ -503,6 +504,7 @@
   const opponentScoreLabelEl = document.getElementById('opponentScoreLabel');
   const opponentNameLabelEl = document.getElementById('opponentNameLabel');
   const resetBtn = document.getElementById('resetBtn');
+  const backToMenuBtn = document.getElementById('backToMenuBtn');
   const quitOnlineBtn = document.getElementById('quitOnlineBtn');
   const roundsSelect = document.getElementById('roundsSelect');
   const choiceButtons = document.querySelectorAll('.choice-btn');
@@ -532,6 +534,7 @@
     opponentScoreLabelEl.textContent = 'Ordi';
     soloSettingsEl.classList.remove('hidden');
     onlineInfoEl.classList.add('hidden');
+    backToMenuBtn.classList.remove('hidden');
     quitOnlineBtn.classList.add('hidden');
     subtitleEl.textContent = 'Choisis ton arme !';
     startNewMatch();
@@ -551,6 +554,11 @@
 
   quitOnlineBtn.addEventListener('click', () => {
     cleanupConnection();
+    subtitleEl.textContent = 'Choisis ton mode de jeu !';
+    showScreen(modeSelectEl);
+  });
+
+  backToMenuBtn.addEventListener('click', () => {
     subtitleEl.textContent = 'Choisis ton mode de jeu !';
     showScreen(modeSelectEl);
   });
@@ -668,6 +676,7 @@
     opponentScoreLabelEl.textContent = 'Adv.';
     soloSettingsEl.classList.add('hidden');
     onlineInfoEl.classList.remove('hidden');
+    backToMenuBtn.classList.add('hidden');
     quitOnlineBtn.classList.remove('hidden');
     onlineInfoEl.textContent = onlineRoundsTarget === 0
       ? '🌐 Partie en ligne — Mode libre (sans limite)'
