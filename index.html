@@ -293,7 +293,9 @@
   .settings {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px 18px;
     background: var(--panel);
     padding: 10px 18px;
     border-radius: 12px;
@@ -419,6 +421,12 @@
         <option value="10">10 manches gagnantes</option>
         <option value="0">Libre (sans limite)</option>
       </select>
+      <label for="difficultySelect">Difficulté :</label>
+      <select id="difficultySelect">
+        <option value="facile">🟢 Facile</option>
+        <option value="moyen" selected>🟠 Moyen</option>
+        <option value="difficile">🔴 Difficile</option>
+      </select>
     </div>
 
     <div class="online-info hidden" id="onlineInfo"></div>
@@ -470,6 +478,7 @@
   const ICONS = { pierre: '🪨', feuille: '📄', ciseaux: '✂️' };
   const CHOICES = Object.keys(ICONS);
   const BEATS = { pierre: 'ciseaux', feuille: 'pierre', ciseaux: 'feuille' };
+  const COUNTERS = { ciseaux: 'pierre', pierre: 'feuille', feuille: 'ciseaux' };
 
   // Écrans
   const modeSelectEl = document.getElementById('modeSelect');
@@ -507,10 +516,12 @@
   const backToMenuBtn = document.getElementById('backToMenuBtn');
   const quitOnlineBtn = document.getElementById('quitOnlineBtn');
   const roundsSelect = document.getElementById('roundsSelect');
+  const difficultySelect = document.getElementById('difficultySelect');
   const choiceButtons = document.querySelectorAll('.choice-btn');
 
   let scores = { player: 0, draw: 0, computer: 0 };
   let matchOver = false;
+  let playerHistory = [];
 
   // État multijoueur
   let onlineMode = false;
@@ -703,7 +714,8 @@
       return;
     }
 
-    const computerChoice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
+    const computerChoice = getComputerChoice();
+    playerHistory.push(choice);
     playerIconEl.textContent = ICONS[choice];
     computerIconEl.textContent = ICONS[computerChoice];
 
@@ -711,6 +723,27 @@
     updateResult(outcome, choice, computerChoice);
     updateScore(outcome);
     checkMatchOver();
+  }
+
+  function getComputerChoice() {
+    const difficulty = difficultySelect.value;
+    const random = () => CHOICES[Math.floor(Math.random() * CHOICES.length)];
+
+    if (difficulty === 'facile' && playerHistory.length > 0 && Math.random() < 0.5) {
+      // Mise sur le fait que le joueur répète son dernier coup
+      const lastPlayerChoice = playerHistory[playerHistory.length - 1];
+      return BEATS[lastPlayerChoice];
+    }
+
+    if (difficulty === 'difficile' && playerHistory.length >= 2 && Math.random() < 0.7) {
+      // Contre le coup le plus joué par le joueur jusqu'ici
+      const counts = { pierre: 0, feuille: 0, ciseaux: 0 };
+      playerHistory.forEach(c => counts[c]++);
+      const mostFrequent = CHOICES.reduce((a, b) => (counts[b] > counts[a] ? b : a));
+      return COUNTERS[mostFrequent];
+    }
+
+    return random();
   }
 
   function tryResolveOnlineRound() {
@@ -791,6 +824,7 @@
     matchOver = false;
     myChoice = null;
     oppChoice = null;
+    playerHistory = [];
     playerScoreEl.textContent = 0;
     drawScoreEl.textContent = 0;
     computerScoreEl.textContent = 0;
@@ -815,6 +849,7 @@
 
   resetBtn.addEventListener('click', startNewMatch);
   roundsSelect.addEventListener('change', () => { if (!onlineMode) startNewMatch(); });
+  difficultySelect.addEventListener('change', () => { if (!onlineMode) startNewMatch(); });
 </script>
 
 </body>
