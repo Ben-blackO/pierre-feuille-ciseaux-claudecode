@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pierre Feuille Ciseaux</title>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --panel: #1a1a1a;
+    --accent: #ff7a00;
+    --accent2: #2e1500;
+    --text: #f5f5f5;
+    --win: #4caf50;
+    --lose: #ff3b3b;
+    --draw: #ff7a00;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--bg), var(--accent2));
+    color: var(--text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 60px;
+  }
+
+  h1 {
+    margin: 8px 0 4px;
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  .subtitle {
+    color: #aaa;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .hidden { display: none !important; }
+
+  .panel {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .mode-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 16px;
+  }
+
+  .mode-btn {
+    background: var(--panel);
+    border: 2px solid var(--accent);
+    color: var(--text);
+    padding: 18px;
+    border-radius: 14px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .mode-btn:hover {
+    background: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .back-btn {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-bottom: 12px;
+    padding: 4px 0;
+  }
+
+  .back-btn:hover { color: var(--accent); }
+
+  .lobby-section {
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .lobby-section h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    color: var(--accent);
+  }
+
+  .lobby-divider {
+    text-align: center;
+    color: #666;
+    margin: 8px 0 16px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .primary-btn {
+    background: var(--accent);
+    border: none;
+    color: #0a0a0a;
+    font-weight: bold;
+    padding: 10px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: opacity 0.15s ease;
+    width: 100%;
+  }
+
+  .primary-btn:hover { opacity: 0.85; }
+
+  .text-input {
+    width: 100%;
+    background: var(--accent2);
+    border: 2px solid var(--accent2);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+  }
+
+  .text-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .room-code-box {
+    margin-top: 14px;
+    text-align: center;
+  }
+
+  .room-code {
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    background: var(--accent2);
+    border: 2px dashed var(--accent);
+    border-radius: 10px;
+    padding: 10px;
+    word-break: break-all;
+    margin: 10px 0;
+  }
+
+  .lobby-status {
+    font-size: 0.9rem;
+    color: #ccc;
+    text-align: center;
+    min-height: 20px;
+    margin-top: 8px;
+  }
+
+  .score-board {
+    display: flex;
+    gap: 24px;
+    background: var(--panel);
+    padding: 12px 24px;
+    border-radius: 12px;
+    margin-bottom: 32px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .score-item {
+    text-align: center;
+  }
+
+  .score-item .label {
+    font-size: 0.8rem;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .score-item .value {
+    font-size: 1.8rem;
+    font-weight: bold;
+  }
+
+  .choices {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+
+  .choice-btn {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    background: var(--panel);
+    font-size: 2.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+
+  .choice-btn:hover {
+    transform: translateY(-6px) scale(1.05);
+    box-shadow: 0 8px 16px rgba(233, 69, 96, 0.4);
+    background: var(--accent);
+  }
+
+  .choice-btn:active {
+    transform: scale(0.95);
+  }
+
+  .battle {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    margin-bottom: 24px;
+    min-height: 140px;
+  }
+
+  .player-box {
+    text-align: center;
+  }
+
+  .player-box .name {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .icon-display {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: var(--panel);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    border: 3px solid var(--accent2);
+    transition: border-color 0.3s ease;
+  }
+
+  .vs {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #aaa;
+  }
+
+  .result-message {
+    font-size: 1.4rem;
+    font-weight: bold;
+    min-height: 36px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  .result-message.win { color: var(--win); }
+  .result-message.lose { color: var(--lose); }
+  .result-message.draw { color: var(--draw); }
+  .result-message.waiting { color: #aaa; font-weight: normal; font-size: 1.1rem; }
+
+  .reset-btn {
+    background: transparent;
+    border: 2px solid #aaa;
+    color: #aaa;
+    padding: 8px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.15s ease;
+    margin: 4px;
+  }
+
+  .reset-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .settings {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    padding: 10px 18px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .settings label {
+    font-size: 0.9rem;
+    color: #ccc;
+  }
+
+  .settings select {
+    background: var(--accent2);
+    color: var(--text);
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .settings select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .online-info {
+    font-size: 0.85rem;
+    color: #ccc;
+    background: var(--panel);
+    padding: 8px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .match-message {
+    font-size: 1.6rem;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+    min-height: 40px;
+    color: var(--draw);
+  }
+
+  .choice-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    background: var(--panel);
+  }
+
+  .footer-actions {
+    text-align: center;
+  }
+
+  @media (max-width: 480px) {
+    .battle { gap: 20px; }
+    .icon-display { width: 80px; height: 80px; font-size: 2.2rem; }
+    .choice-btn { width: 80px; height: 80px; font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+
+  <h1>🪨 📄 ✂️ Pierre Feuille Ciseaux</h1>
+  <p class="subtitle" id="subtitle">Choisis ton mode de jeu !</p>
+
+  <!-- Écran de choix du mode -->
+  <div class="panel" id="modeSelect">
+    <div class="mode-buttons">
+      <button class="mode-btn" id="soloModeBtn">🤖 Solo vs Ordinateur</button>
+      <button class="mode-btn" id="onlineModeBtn">🌐 Multijoueur en ligne</button>
+    </div>
+  </div>
+
+  <!-- Lobby multijoueur -->
+  <div class="panel hidden" id="onlineLobby">
+    <button class="back-btn" id="backFromLobbyBtn">← Retour</button>
+
+    <div class="lobby-section">
+      <h3>Créer une partie</h3>
+      <label for="lobbyRoundsSelect">Manches gagnantes :</label>
+      <select id="lobbyRoundsSelect" class="text-input" style="margin-top:8px;">
+        <option value="1">1 manche gagnante</option>
+        <option value="3" selected>3 manches gagnantes</option>
+        <option value="5">5 manches gagnantes</option>
+        <option value="7">7 manches gagnantes</option>
+        <option value="10">10 manches gagnantes</option>
+        <option value="0">Libre (sans limite)</option>
+      </select>
+      <button class="primary-btn" id="createRoomBtn">Créer une partie</button>
+      <div class="room-code-box hidden" id="roomCodeBox">
+        <p>Envoie ce code à ton ami :</p>
+        <div class="room-code" id="roomCodeValue"></div>
+        <button class="reset-btn" id="copyCodeBtn">📋 Copier le code</button>
+        <p class="lobby-status" id="lobbyStatus">En attente d'un adversaire...</p>
+      </div>
+    </div>
+
+    <div class="lobby-divider">ou</div>
+
+    <div class="lobby-section">
+      <h3>Rejoindre une partie</h3>
+      <input type="text" class="text-input" id="joinCodeInput" placeholder="Colle le code reçu ici">
+      <button class="primary-btn" id="joinRoomBtn">Rejoindre</button>
+      <p class="lobby-status" id="joinStatus"></p>
+    </div>
+  </div>
+
+  <!-- Zone de jeu -->
+  <div class="hidden" id="gameArea" style="width:100%; display:flex; flex-direction:column; align-items:center;">
+
+    <div class="settings" id="soloSettings">
+      <label for="roundsSelect">Partie en :</label>
+      <select id="roundsSelect">
+        <option value="1">1 manche gagnante</option>
+        <option value="3" selected>3 manches gagnantes</option>
+        <option value="5">5 manches gagnantes</option>
+        <option value="7">7 manches gagnantes</option>
+        <option value="10">10 manches gagnantes</option>
+        <option value="0">Libre (sans limite)</option>
+      </select>
+    </div>
+
+    <div class="online-info hidden" id="onlineInfo"></div>
+
+    <div class="score-board">
+      <div class="score-item">
+        <div class="label">Toi</div>
+        <div class="value" id="playerScore">0</div>
+      </div>
+      <div class="score-item">
+        <div class="label">Nul</div>
+        <div class="value" id="drawScore">0</div>
+      </div>
+      <div class="score-item">
+        <div class="label" id="opponentScoreLabel">Ordi</div>
+        <div class="value" id="computerScore">0</div>
+      </div>
+    </div>
+
+    <div class="battle">
+      <div class="player-box">
+        <div class="name">Toi</div>
+        <div class="icon-display" id="playerIcon">❓</div>
+      </div>
+      <div class="vs">VS</div>
+      <div class="player-box">
+        <div class="name" id="opponentNameLabel">Ordinateur</div>
+        <div class="icon-display" id="computerIcon">❓</div>
+      </div>
+    </div>
+
+    <div class="match-message" id="matchMessage"></div>
+    <div class="result-message" id="resultMessage"></div>
+
+    <div class="choices">
+      <button class="choice-btn" data-choice="pierre" title="Pierre">🪨</button>
+      <button class="choice-btn" data-choice="feuille" title="Feuille">📄</button>
+      <button class="choice-btn" data-choice="ciseaux" title="Ciseaux">✂️</button>
+    </div>
+
+    <div class="footer-actions">
+      <button class="reset-btn" id="resetBtn">Nouvelle partie</button>
+      <button class="reset-btn hidden" id="quitOnlineBtn">🚪 Quitter la partie</button>
+    </div>
+  </div>
+
+<script>
+  const ICONS = { pierre: '🪨', feuille: '📄', ciseaux: '✂️' };
+  const CHOICES = Object.keys(ICONS);
+  const BEATS = { pierre: 'ciseaux', feuille: 'pierre', ciseaux: 'feuille' };
+
+  // Écrans
+  const modeSelectEl = document.getElementById('modeSelect');
+  const onlineLobbyEl = document.getElementById('onlineLobby');
+  const gameAreaEl = document.getElementById('gameArea');
+  const subtitleEl = document.getElementById('subtitle');
+  const soloModeBtn = document.getElementById('soloModeBtn');
+  const onlineModeBtn = document.getElementById('onlineModeBtn');
+  const backFromLobbyBtn = document.getElementById('backFromLobbyBtn');
+
+  // Lobby
+  const lobbyRoundsSelect = document.getElementById('lobbyRoundsSelect');
+  const createRoomBtn = document.getElementById('createRoomBtn');
+  const roomCodeBox = document.getElementById('roomCodeBox');
+  const roomCodeValue = document.getElementById('roomCodeValue');
+  const copyCodeBtn = document.getElementById('copyCodeBtn');
+  const lobbyStatus = document.getElementById('lobbyStatus');
+  const joinCodeInput = document.getElementById('joinCodeInput');
+  const joinRoomBtn = document.getElementById('joinRoomBtn');
+  const joinStatus = document.getElementById('joinStatus');
+
+  // Jeu
+  const soloSettingsEl = document.getElementById('soloSettings');
+  const onlineInfoEl = document.getElementById('onlineInfo');
+  const playerIconEl = document.getElementById('playerIcon');
+  const computerIconEl = document.getElementById('computerIcon');
+  const resultMessageEl = document.getElementById('resultMessage');
+  const matchMessageEl = document.getElementById('matchMessage');
+  const playerScoreEl = document.getElementById('playerScore');
+  const drawScoreEl = document.getElementById('drawScore');
+  const computerScoreEl = document.getElementById('computerScore');
+  const opponentScoreLabelEl = document.getElementById('opponentScoreLabel');
+  const opponentNameLabelEl = document.getElementById('opponentNameLabel');
+  const resetBtn = document.getElementById('resetBtn');
+  const quitOnlineBtn = document.getElementById('quitOnlineBtn');
+  const roundsSelect = document.getElementById('roundsSelect');
+  const choiceButtons = document.querySelectorAll('.choice-btn');
+
+  let scores = { player: 0, draw: 0, computer: 0 };
+  let matchOver = false;
+
+  // État multijoueur
+  let onlineMode = false;
+  let peer = null;
+  let conn = null;
+  let onlineRoundsTarget = 3;
+  let myChoice = null;
+  let oppChoice = null;
+
+  function showScreen(screen) {
+    modeSelectEl.classList.add('hidden');
+    onlineLobbyEl.classList.add('hidden');
+    gameAreaEl.classList.add('hidden');
+    screen.classList.remove('hidden');
+  }
+
+  // --- Navigation ---
+  soloModeBtn.addEventListener('click', () => {
+    onlineMode = false;
+    opponentNameLabelEl.textContent = 'Ordinateur';
+    opponentScoreLabelEl.textContent = 'Ordi';
+    soloSettingsEl.classList.remove('hidden');
+    onlineInfoEl.classList.add('hidden');
+    quitOnlineBtn.classList.add('hidden');
+    subtitleEl.textContent = 'Choisis ton arme !';
+    startNewMatch();
+    showScreen(gameAreaEl);
+  });
+
+  onlineModeBtn.addEventListener('click', () => {
+    subtitleEl.textContent = 'Joue avec un ami à distance';
+    showScreen(onlineLobbyEl);
+  });
+
+  backFromLobbyBtn.addEventListener('click', () => {
+    cleanupConnection();
+    subtitleEl.textContent = 'Choisis ton mode de jeu !';
+    showScreen(modeSelectEl);
+  });
+
+  quitOnlineBtn.addEventListener('click', () => {
+    cleanupConnection();
+    subtitleEl.textContent = 'Choisis ton mode de jeu !';
+    showScreen(modeSelectEl);
+  });
+
+  function cleanupConnection() {
+    if (conn) { try { conn.close(); } catch (e) {} conn = null; }
+    if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
+    roomCodeBox.classList.add('hidden');
+    lobbyStatus.textContent = '';
+    joinStatus.textContent = '';
+    joinCodeInput.value = '';
+  }
+
+  // --- Création de partie (hôte) ---
+  createRoomBtn.addEventListener('click', () => {
+    cleanupConnection();
+    createRoomBtn.disabled = true;
+    lobbyStatus.textContent = 'Connexion au service...';
+
+    peer = new Peer();
+
+    peer.on('open', id => {
+      roomCodeValue.textContent = id;
+      roomCodeBox.classList.remove('hidden');
+      lobbyStatus.textContent = "En attente d'un adversaire...";
+      createRoomBtn.disabled = false;
+    });
+
+    peer.on('connection', c => {
+      conn = c;
+      setupConnection();
+      conn.on('open', () => {
+        onlineRoundsTarget = parseInt(lobbyRoundsSelect.value, 10);
+        conn.send({ type: 'settings', rounds: onlineRoundsTarget });
+        beginOnlineGame();
+      });
+    });
+
+    peer.on('error', err => {
+      lobbyStatus.textContent = 'Erreur : ' + err.type;
+      createRoomBtn.disabled = false;
+    });
+  });
+
+  copyCodeBtn.addEventListener('click', () => {
+    const code = roomCodeValue.textContent;
+    try {
+      navigator.clipboard.writeText(code);
+      copyCodeBtn.textContent = '✅ Copié !';
+      setTimeout(() => { copyCodeBtn.textContent = '📋 Copier le code'; }, 1500);
+    } catch (e) {
+      // clipboard indisponible, l'utilisateur peut sélectionner le code manuellement
+    }
+  });
+
+  // --- Rejoindre une partie (invité) ---
+  joinRoomBtn.addEventListener('click', () => {
+    const code = joinCodeInput.value.trim();
+    if (!code) return;
+
+    cleanupConnection();
+    joinRoomBtn.disabled = true;
+    joinStatus.textContent = 'Connexion...';
+
+    peer = new Peer();
+
+    peer.on('open', () => {
+      conn = peer.connect(code);
+      setupConnection();
+
+      conn.on('open', () => {
+        joinStatus.textContent = 'Connecté ! En attente des paramètres...';
+      });
+    });
+
+    peer.on('error', err => {
+      joinStatus.textContent = 'Erreur : ' + err.type;
+      joinRoomBtn.disabled = false;
+    });
+  });
+
+  function setupConnection() {
+    conn.on('data', handleData);
+    conn.on('close', () => {
+      if (!gameAreaEl.classList.contains('hidden')) {
+        matchMessageEl.textContent = "⚠️ L'adversaire a quitté la partie";
+        matchMessageEl.style.color = 'var(--lose)';
+        matchOver = true;
+        setChoicesEnabled(false);
+      } else {
+        joinStatus.textContent = "L'hôte a annulé la partie";
+      }
+      conn = null;
+    });
+    conn.on('error', () => {
+      joinRoomBtn.disabled = false;
+    });
+  }
+
+  function handleData(data) {
+    if (data.type === 'settings') {
+      onlineRoundsTarget = data.rounds;
+      beginOnlineGame();
+    } else if (data.type === 'choice') {
+      oppChoice = data.value;
+      tryResolveOnlineRound();
+    } else if (data.type === 'reset') {
+      resetLocalMatchState();
+    }
+  }
+
+  function beginOnlineGame() {
+    onlineMode = true;
+    opponentNameLabelEl.textContent = 'Adversaire';
+    opponentScoreLabelEl.textContent = 'Adv.';
+    soloSettingsEl.classList.add('hidden');
+    onlineInfoEl.classList.remove('hidden');
+    quitOnlineBtn.classList.remove('hidden');
+    onlineInfoEl.textContent = onlineRoundsTarget === 0
+      ? '🌐 Partie en ligne — Mode libre (sans limite)'
+      : `🌐 Partie en ligne — ${onlineRoundsTarget} manche(s) gagnante(s)`;
+    resetLocalMatchState();
+    showScreen(gameAreaEl);
+  }
+
+  // --- Logique de jeu ---
+  function play(choice) {
+    if (matchOver) return;
+
+    if (onlineMode) {
+      if (!conn || myChoice) return;
+      myChoice = choice;
+      playerIconEl.textContent = ICONS[choice];
+      computerIconEl.textContent = '❓';
+      resultMessageEl.classList.remove('win', 'lose', 'draw');
+      resultMessageEl.classList.add('waiting');
+      resultMessageEl.textContent = "En attente de l'adversaire...";
+      setChoicesEnabled(false);
+      conn.send({ type: 'choice', value: choice });
+      tryResolveOnlineRound();
+      return;
+    }
+
+    const computerChoice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
+    playerIconEl.textContent = ICONS[choice];
+    computerIconEl.textContent = ICONS[computerChoice];
+
+    const outcome = compare(choice, computerChoice);
+    updateResult(outcome, choice, computerChoice);
+    updateScore(outcome);
+    checkMatchOver();
+  }
+
+  function tryResolveOnlineRound() {
+    if (!myChoice || !oppChoice) return;
+
+    computerIconEl.textContent = ICONS[oppChoice];
+    resultMessageEl.classList.remove('waiting');
+
+    const outcome = compare(myChoice, oppChoice);
+    updateResult(outcome, myChoice, oppChoice);
+    updateScore(outcome);
+
+    myChoice = null;
+    oppChoice = null;
+
+    checkMatchOver();
+    if (!matchOver) setChoicesEnabled(true);
+  }
+
+  function compare(a, b) {
+    if (a === b) return 'draw';
+    if (BEATS[a] === b) return 'win';
+    return 'lose';
+  }
+
+  function updateResult(outcome, playerChoice, opponentChoice) {
+    resultMessageEl.classList.remove('win', 'lose', 'draw', 'waiting');
+    resultMessageEl.classList.add(outcome);
+
+    const messages = {
+      win: `Tu gagnes ! ${capitalize(playerChoice)} bat ${opponentChoice}`,
+      lose: `Tu perds... ${capitalize(opponentChoice)} bat ${playerChoice}`,
+      draw: `Égalité ! Vous avez choisi ${playerChoice}`
+    };
+
+    resultMessageEl.textContent = messages[outcome];
+  }
+
+  function updateScore(outcome) {
+    if (outcome === 'win') scores.player++;
+    else if (outcome === 'lose') scores.computer++;
+    else scores.draw++;
+
+    playerScoreEl.textContent = scores.player;
+    drawScoreEl.textContent = scores.draw;
+    computerScoreEl.textContent = scores.computer;
+  }
+
+  function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  function checkMatchOver() {
+    const target = onlineMode ? onlineRoundsTarget : parseInt(roundsSelect.value, 10);
+    if (target === 0) return; // mode libre, pas de fin de partie
+
+    if (scores.player >= target || scores.computer >= target) {
+      matchOver = true;
+      setChoicesEnabled(false);
+
+      if (scores.player >= target) {
+        matchMessageEl.textContent = `🏆 Partie gagnée ! Tu l'emportes ${scores.player} - ${scores.computer}`;
+        matchMessageEl.style.color = 'var(--win)';
+      } else {
+        const opponentWord = onlineMode ? "L'adversaire gagne" : "L'ordinateur gagne";
+        matchMessageEl.textContent = `💀 Partie perdue... ${opponentWord} ${scores.computer} - ${scores.player}`;
+        matchMessageEl.style.color = 'var(--lose)';
+      }
+    }
+  }
+
+  function setChoicesEnabled(enabled) {
+    choiceButtons.forEach(btn => btn.disabled = !enabled);
+  }
+
+  function resetLocalMatchState() {
+    scores = { player: 0, draw: 0, computer: 0 };
+    matchOver = false;
+    myChoice = null;
+    oppChoice = null;
+    playerScoreEl.textContent = 0;
+    drawScoreEl.textContent = 0;
+    computerScoreEl.textContent = 0;
+    playerIconEl.textContent = '❓';
+    computerIconEl.textContent = '❓';
+    resultMessageEl.textContent = '';
+    resultMessageEl.classList.remove('win', 'lose', 'draw', 'waiting');
+    matchMessageEl.textContent = '';
+    setChoicesEnabled(true);
+  }
+
+  function startNewMatch() {
+    resetLocalMatchState();
+    if (onlineMode && conn) {
+      conn.send({ type: 'reset' });
+    }
+  }
+
+  choiceButtons.forEach(btn => {
+    btn.addEventListener('click', () => play(btn.dataset.choice));
+  });
+
+  resetBtn.addEventListener('click', startNewMatch);
+  roundsSelect.addEventListener('change', () => { if (!onlineMode) startNewMatch(); });
+</script>
+
+</body>
+</html>
